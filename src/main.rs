@@ -38,6 +38,31 @@ async fn unregister(user: &str) {
     }
 }
 
+#[get("/<source>/<author>/<new_comment>")]
+async fn comment(source: &str, author: &str, new_comment: &str) {
+    match simple_log(vec!["comments", source, author], new_comment) {
+        Ok(_) => (),
+        Err(error) => {
+            println!("Error: {}", error);
+        }
+    }
+}
+
+#[get("/<new_contact>")]
+async fn contact(new_contact: &str) {
+    match simple_log(vec!["contacts"], new_contact) {
+        Ok(_) => (),
+        Err(error) => {
+            println!("Error: {}", error);
+        }
+    }
+}
+
+#[get("/")]
+async fn get_portfolio() -> &'static str {
+    "https://evisualuser.github.io/"
+}
+
 #[rocket::main]
 async fn main() -> Result<(), rocket::Error> {
     set_allow_console_log(true);
@@ -50,6 +75,9 @@ async fn main() -> Result<(), rocket::Error> {
         .mount("/unregister", routes![unregister])
         .mount("/hello", routes![hello])
         .mount("/help", routes![help])
+        .mount("/portfolio", routes![get_portfolio])
+        .mount("/comment", routes![comment])
+        .mount("/contact", routes![contact])
         .launch()
         .await?;
 
