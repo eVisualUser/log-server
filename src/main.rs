@@ -3,57 +3,20 @@
 use full_logger::logger::*;
 use full_logger::file_manager::*;
 
-#[get("/")]
-fn index() -> &'static str {
-    "Server hosted by eVisualUser."
-}
+static mut LOGS: Vec::<String> = Vec::<String>::new();
 
-#[get("/")]
-fn help() -> &'static str {
-    "Server used for simple tasks mostly about logging data."
-}
-
-#[get("/")]
-fn hello() -> &'static str {
-    "Hello, World!"
-}
-
-#[get("/<user>")]
-async fn register(user: &str) {
-    match simple_log(vec!["user", "out"], user) {
-        Ok(_) => (),
-        Err(error) => {
-            println!("Error: {}", error);
+#[get("/<source>/<level>/<msg>")]
+async fn server_log(source: &str, level: &str, msg: &str) -> &'static str {
+    match simple_log(vec![source, level], msg) {
+        Ok(_) => {
+            unsafe {
+                LOGS.push(format!("{}: {} -> {}", source, level, msg));
+            }
+            "Succeed to log"
         }
-    }
-}
-
-#[get("/<user>")]
-async fn unregister(user: &str) {
-    match simple_log(vec!["user", "out"], user) {
-        Ok(_) => (),
         Err(error) => {
             println!("Error: {}", error);
-        }
-    }
-}
-
-#[get("/<source>/<author>/<new_comment>")]
-async fn comment(source: &str, author: &str, new_comment: &str) {
-    match simple_log(vec!["comments", source, author], new_comment) {
-        Ok(_) => (),
-        Err(error) => {
-            println!("Error: {}", error);
-        }
-    }
-}
-
-#[get("/<new_contact>")]
-async fn contact(new_contact: &str) {
-    match simple_log(vec!["contacts"], new_contact) {
-        Ok(_) => (),
-        Err(error) => {
-            println!("Error: {}", error);
+            "Failed to log"
         }
     }
 }
@@ -63,23 +26,52 @@ async fn get_portfolio() -> &'static str {
     "https://evisualuser.github.io/"
 }
 
-#[rocket::main]
-async fn main() -> Result<(), rocket::Error> {
+fn get_logs() -> &'static mut Vec<String> {
+    unsafe {
+        &mut LOGS
+    }
+}
+
+fn get_logs_to_string() -> String {
+    let mut result = String::new();
+    for log in get_logs() {
+        result += log;
+        result += "\n";
+    }
+    return result;
+}
+
+async fn launch() -> Result<(), rocket::Error> {
     set_allow_console_log(true);
     set_or_create_global_log_file("log", FileSize::Mo(100));
     set_message_box_trigger(Some(String::from("error")));
 
-    let _rocket = rocket::build()
-        .mount("/", routes![index])
-        .mount("/register", routes![register])
-        .mount("/unregister", routes![unregister])
-        .mount("/hello", routes![hello])
-        .mount("/help", routes![help])
-        .mount("/portfolio", routes![get_portfolio])
-        .mount("/comment", routes![comment])
-        .mount("/contact", routes![contact])
-        .launch()
-        .await?;
+    let rocket = rocket::build()
+        .mount("/", routes![get_portfolio])
+        .mount("/log", routes![server_log])
+        .launch();
+
+    rocket.await?;
 
     Ok(())
+}
+
+fn main() {
+    let server_runtime = tokio::runtime::Runtime::new().unwrap();
+    let server = server_runtime.spawn(async {
+        launch().await
+    });
+
+    let options = eframe::NativeOptions::default();
+    eframe::run_simple_native("Logging Server", options, |ctx, frame| {
+        eframe::egui::CentralPanel::default().show(ctx, |ui|{
+            eframe::egui::scroll_area::ScrollArea::vertical()
+            .animated(true)
+            .show_rows(ui, ui.text_style_height(&eframe::egui::TextStyle::Body), 20, |ui, _|{
+                ui.label(get_logs_to_string());
+            });
+        });
+    }).unwrap();
+
+    server.abort();
 }
