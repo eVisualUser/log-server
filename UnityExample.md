@@ -1,6 +1,6 @@
 # Example of implementation in unity
 
-'''cs
+```cs
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using UnityEngine.Networking;
@@ -33,4 +33,4 @@ namespace Game.Core {
         }
     }
 }
-'''
+```
