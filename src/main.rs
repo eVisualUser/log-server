@@ -1,7 +1,9 @@
 #![allow(static_mut_refs)]
 
 use eframe::egui::Color32;
+use eframe::egui::ViewportBuilder;
 use eframe::egui::Widget;
+use eframe::egui_glow;
 use full_logger::logger::*;
 use full_logger::file_manager::*;
 
@@ -98,7 +100,24 @@ fn main() {
         launch().await
     });
 
-    let options: eframe::NativeOptions = eframe::NativeOptions::default();
+    let options = eframe::NativeOptions {
+        viewport: ViewportBuilder::default()
+        .with_transparent(true),
+        vsync: true,
+        multisampling: 0,
+        depth_buffer: 0,
+        stencil_buffer: 0,
+        hardware_acceleration: eframe::HardwareAcceleration::Preferred,
+        renderer: eframe::Renderer::Glow,
+        run_and_return: true,
+        event_loop_builder: None,
+        window_builder: None,
+        shader_version: None,
+        centered: true,
+        persist_window: true,
+        persistence_path: None,
+        dithering: true,
+    };
 
     eframe::run_simple_native("Logging Server", options, |ctx, _frame| {
         eframe::egui::SidePanel::left("WatchedValues").resizable(true).show(ctx, |ui|{
